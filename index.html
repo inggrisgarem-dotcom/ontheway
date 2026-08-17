@@ -3,58 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web 3D On The Way</title>
+    <title>Kolam Koi Digital - Komisaris Otong</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #3b1d52; }
-        canvas { display: block; }
+        body { margin: 0; background-color: #010a15; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        canvas { position: fixed; top: 0; left: 0; z-index: -1; }
+        /* Kontainer untuk menciptakan area scroll */
+        section { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; pointer-events: none; }
+        h1 { font-size: 3rem; margin-bottom: 10px; letter-spacing: 2px; text-shadow: 0 0 20px rgba(0, 243, 255, 0.5); }
+        p { font-size: 1.2rem; max-width: 600px; opacity: 0.8; font-weight: 300; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 <body>
+    
+    <!-- Teks UI untuk Navigasi Smooth Scroll -->
+    <section>
+        <h1>KOLAM KOI DIGITAL</h1>
+        <p>Gulir ke bawah untuk menyelam lebih dalam ke dalam ekosistem buatan.</p>
+    </section>
+    <section>
+        <h1>BIOLUMINESCENCE</h1>
+        <p>Ikan hias menyala berenang mandiri melalui kalkulasi algoritma matematika.</p>
+    </section>
+    <section>
+        <h1>INFRASTRUKTUR PRESISI</h1>
+        <p>Karya digital tingkat tinggi. Dieksekusi langsung dari genggaman tangan.</p>
+    </section>
+
     <script>
+        // 1. Setup Scene (Air Kolam Gelap)
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color('#3b1d52');
-        scene.fog = new THREE.FogExp2('#3b1d52', 0.08);
+        scene.background = new THREE.Color('#010a15'); // Biru kedalaman laut/kolam
+        scene.fog = new THREE.FogExp2('#010a15', 0.05);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 5;
+        camera.position.z = 10;
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const geometry = new THREE.BufferGeometry();
-        const particlesCount = 700;
-        const posArray = new Float32Array(particlesCount * 3);
+        // 2. Partikel Gelembung Air
+        const bubbleGeo = new THREE.BufferGeometry();
+        const bubbleCount = 400;
+        const bubblePos = new Float32Array(bubbleCount * 3);
+        for(let i=0; i < bubbleCount * 3; i++) {
+            bubblePos[i] = (Math.random() - 0.5) * 30;
+        }
+        bubbleGeo.setAttribute('position', new THREE.BufferAttribute(bubblePos, 3));
+        const bubbleMat = new THREE.PointsMaterial({ color: 0x44aaff, size: 0.06, transparent: true, opacity: 0.4 });
+        const bubbles = new THREE.Points(bubbleGeo, bubbleMat);
+        scene.add(bubbles);
 
-        for(let i = 0; i < particlesCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 15;
+        // 3. Mesin Ikan Koi & Ikan Hias Menyala
+        const fishes = [];
+        // Palet Warna: Koi Orange, Neon Blue, Neon Yellow, Neon Pink
+        const colors = [0xff5500, 0x00f3ff, 0xffbb00, 0xff00aa];
+        
+        // Bentuk organik sederhana ikan (kapsul)
+        const fishGeo = new THREE.CapsuleGeometry(0.1, 0.5, 4, 8);
+        
+        for(let i=0; i < 180; i++) {
+            const isKoi = i < 35; // 35 ikan pertama adalah Koi besar
+            const fScale = isKoi ? 1.5 : (0.4 + Math.random() * 0.4); // Ikan hias lebih kecil
+            const fColor = isKoi ? 0xff4500 : colors[Math.floor(Math.random() * colors.length)];
+            
+            const fishMat = new THREE.MeshBasicMaterial({ 
+                color: fColor, 
+                transparent: true, 
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending // Ini yang membuat ikan bercahaya (eye catching)
+            });
+            
+            const fish = new THREE.Mesh(fishGeo, fishMat);
+            
+            // Rebah mendatar
+            fish.rotation.z = Math.PI / 2;
+            fish.scale.set(fScale, fScale, fScale);
+            
+            // Posisi di dalam ruang 3D (Z disebar agar ada depth, Y disebar untuk efek scroll)
+            fish.position.set(
+                (Math.random() - 0.5) * 25, 
+                (Math.random() - 0.5) * 45, 
+                (Math.random() - 0.5) * 15
+            );
+            
+            // DNA Pergerakan (Kecepatan dan offset acak per ikan)
+            fish.userData = {
+                speed: 0.015 + Math.random() * 0.02,
+                offset: Math.random() * Math.PI * 2,
+                yOffset: Math.random() * Math.PI * 2
+            };
+            
+            scene.add(fish);
+            fishes.push(fish);
         }
 
-        geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const material = new THREE.PointsMaterial({
-            size: 0.03,
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.4,
-            blending: THREE.AdditiveBlending
+        // 4. Navigasi Smooth Parallax (Sinkronisasi Scroll dengan Kamera 3D)
+        let scrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            scrollY = window.scrollY;
         });
 
-        const particlesMesh = new THREE.Points(geometry, material);
-        scene.add(particlesMesh);
-
+        // 5. Render Engine (Animasi Berkelanjutan)
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
-            particlesMesh.rotation.y += 0.0005;
-            particlesMesh.position.y += 0.002;
-            if(particlesMesh.position.y > 5) {
-                particlesMesh.position.y = -5;
-            }
+            const elapsedTime = clock.getElapsedTime();
+
+            // Gelembung bergerak naik
+            bubbles.position.y += 0.01;
+            if(bubbles.position.y > 15) bubbles.position.y = 0;
+
+            // Logika Berenang Ikan (Sine/Cosine Waves)
+            fishes.forEach(fish => {
+                const ud = fish.userData;
+                fish.position.x += Math.sin(elapsedTime * ud.speed + ud.offset) * 0.04;
+                fish.position.z += Math.cos(elapsedTime * ud.speed + ud.offset) * 0.04;
+                fish.position.y += Math.sin(elapsedTime * (ud.speed * 0.5) + ud.yOffset) * 0.01;
+                
+                // Rotasi otomatis kepala menghadap arah renang
+                fish.rotation.y = Math.atan2(
+                    Math.cos(elapsedTime * ud.speed + ud.offset), 
+                    Math.sin(elapsedTime * ud.speed + ud.offset)
+                );
+            });
+
+            // Kamera "Menyelam" secara halus merespons scroll UI
+            camera.position.y = -(scrollY * 0.015);
+
             renderer.render(scene, camera);
         }
         animate();
 
+        // 6. Responsif Layar
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
